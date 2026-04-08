@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Panel Admin - EcoAlerta Villavo{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  .admin-sidebar { min-height: 100vh; background: #1a2332; }
+  .sidebar-link { color: rgba(255,255,255,.8); text-decoration: none; padding: 10px 16px; display: flex; align-items: center; gap: 10px; border-radius: 8px; transition: all .2s; }
+  .sidebar-link:hover, .sidebar-link.active { background: rgba(255,255,255,.1); color: white; }
+  .kpi-card { border-radius: 16px; padding: 20px; color: white; }
+  #mapaCalor { height: 380px; border-radius: 12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex">
+    <!-- Sidebar -->
+    <nav class="admin-sidebar d-none d-md-block" style="width:220px; flex-shrink:0;">
+        <div class="p-3 text-white fw-bold border-bottom border-white border-opacity-10 mb-2">
+            <i class="bi bi-shield-lock me-2 text-warning"></i>Admin
+        </div>
+        <div class="px-2">
+            <a href="/admin" class="sidebar-link active"><i class="bi bi-speedometer2"></i>Dashboard</a>
+            <a href="/admin/reportes" class="sidebar-link"><i class="bi bi-flag"></i>Reportes</a>
+            <a href="/admin/usuarios" class="sidebar-link"><i class="bi bi-people"></i>Usuarios</a>
+            <a href="/mapa" class="sidebar-link"><i class="bi bi-map"></i>Ver mapa</a>
+            <hr class="border-white border-opacity-10 my-2"/>
+            <a href="/logout" class="sidebar-link text-danger"><i class="bi bi-box-arrow-right"></i>Salir</a>
+        </div>
+    </nav>
+
+    <div class="flex-grow-1 p-4 bg-light min-vh-100">
+        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+            <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 me-2 text-warning"></i>Dashboard</h4>
+            <small class="text-muted">Bienvenido, {{ usuario.nombre }}</small>
+        </div>
+
+        <!-- KPIs -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="kpi-card bg-primary shadow">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-clipboard-data fs-1"></i>
+                        <div>
+                            <h2 class="fw-bold mb-0">{{ total }}</h2>
+                            <small>Total reportes</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card bg-danger shadow">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-exclamation-triangle-fill fs-1"></i>
+                        <div>
+                            <h2 class="fw-bold mb-0">{{ alta }}</h2>
+                            <small>Prioridad alta</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card bg-warning shadow">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-clock-history fs-1"></i>
+                        <div>
+                            <h2 class="fw-bold mb-0">{{ pendientes }}</h2>
+                            <small>Pendientes</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card bg-success shadow">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-check-circle-fill fs-1"></i>
+                        <div>
+                            <h2 class="fw-bold mb-0">{{ resueltos }}</h2>
+                            <small>Resueltos</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <!-- Gráfica Estados -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3">Estado de reportes</h6>
+                        <canvas id="grafEstados" height="220"></canvas>
+                    </div>
+                </div>
+            </div>
+            <!-- Gráfica Prioridades -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3">Prioridades activas</h6>
+                        <canvas id="grafPrioridades" height="220"></canvas>
+                    </div>
+                </div>
+            </div>
+            <!-- Top Barrios -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3">Top barrios afectados</h6>
+                        <canvas id="grafBarrios" height="220"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mapa de calor admin -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="bi bi-fire text-danger me-2"></i>Mapa de calor de reportes activos</h6>
+                <div id="mapaCalor"></div>
+            </div>
+        </div>
+
+        <!-- Estadísticas rápidas -->
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                    <i class="bi bi-people display-4 text-primary mb-2"></i>
+                    <h3 class="fw-bold">{{ total_usuarios }}</h3>
+                    <p class="text-muted mb-0">Usuarios registrados</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                    <i class="bi bi-arrow-repeat display-4 text-info mb-2"></i>
+                    <h3 class="fw-bold">{{ en_proceso }}</h3>
+                    <p class="text-muted mb-0">En proceso de atención</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                    <i class="bi bi-bar-chart display-4 text-warning mb-2"></i>
+                    <h3 class="fw-bold">{{ media }}</h3>
+                    <p class="text-muted mb-0">Prioridad media</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<script>
+async function cargarEstadisticas() {
+    const res = await fetch("/api/estadisticas");
+    const d = await res.json();
+
+    // Gráfica estados
+    new Chart(document.getElementById("grafEstados"), {
+        type: "doughnut",
+        data: {
+            labels: ["Pendiente", "En proceso", "Resuelto"],
+            datasets: [{ data: [d.por_estado.pendiente, d.por_estado.en_proceso, d.por_estado.resuelto], backgroundColor: ["#ffc107","#0dcaf0","#198754"], borderWidth: 0 }]
+        },
+        options: { plugins: { legend: { position: "bottom" } }, cutout: "65%" }
+    });
+
+    // Gráfica prioridades
+    new Chart(document.getElementById("grafPrioridades"), {
+        type: "pie",
+        data: {
+            labels: ["Alta", "Media", "Baja"],
+            datasets: [{ data: [d.por_prioridad.alta, d.por_prioridad.media, d.por_prioridad.baja], backgroundColor: ["#dc3545","#fd7e14","#198754"], borderWidth: 0 }]
+        },
+        options: { plugins: { legend: { position: "bottom" } } }
+    });
+
+    // Gráfica barrios
+    if (d.barrios.length) {
+        new Chart(document.getElementById("grafBarrios"), {
+            type: "bar",
+            data: {
+                labels: d.barrios.map(b => b.barrio),
+                datasets: [{ label: "Reportes", data: d.barrios.map(b => b.total), backgroundColor: "#0d6efd", borderRadius: 6 }]
+            },
+            options: { indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        });
+    }
+
+    // Mapa de calor
+    const mapaC = L.map("mapaCalor").setView([4.142, -73.626], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap contributors", maxZoom: 19 }).addTo(mapaC);
+    if (d.mapa_calor.length) {
+        const pts = d.mapa_calor.map(p => [p.lat, p.lng, p.peso]);
+        L.heatLayer(pts, { radius: 35, blur: 20, maxZoom: 17, max: 10 }).addTo(mapaC);
+        // También poner marcadores
+        d.mapa_calor.forEach(p => L.circleMarker([p.lat, p.lng], { radius: 5, color: "#dc3545", fillOpacity: .6 }).addTo(mapaC));
+    }
+}
+
+cargarEstadisticas();
+</script>
+{% endblock %}

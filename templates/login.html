@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Ingresar - EcoAlerta Villavo{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-lg rounded-4">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-recycle display-4 text-success"></i>
+                        <h4 class="fw-bold mt-2">Ingresar a EcoAlerta</h4>
+                        <p class="text-muted small">Monitoreo ciudadano de residuos en Villavicencio</p>
+                    </div>
+
+                    {% if error %}
+                    <div class="alert alert-danger rounded-3 py-2"><i class="bi bi-x-circle me-2"></i>{{ error }}</div>
+                    {% endif %}
+
+                    <form action="/login" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Email</label>
+                            <input type="email" name="email" class="form-control rounded-3" placeholder="tu@email.com" required />
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Contraseña</label>
+                            <input type="password" name="password" class="form-control rounded-3" placeholder="••••••••" required />
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100 fw-bold rounded-3">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Ingresar
+                        </button>
+                    </form>
+
+                    <hr class="my-3" />
+                    <p class="text-center small text-muted mb-0">
+                        ¿No tienes cuenta? <a href="/register" class="text-warning fw-semibold">Regístrate aquí</a>
+                    </p>
+                    <p class="text-center small text-muted mt-2 mb-0">
+                        <strong>Admin demo:</strong> admin@ecoalerta.co / admin1234
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

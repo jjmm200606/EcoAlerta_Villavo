@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Hacer un Reporte - EcoAlerta Villavo{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  #mapa-picker { height: 340px; border-radius: 12px; border: 2px solid #dee2e6; }
+  #mapa-picker.border-danger { border-color: #dc3545 !important; }
+  .img-preview { max-height: 200px; object-fit: cover; border-radius: 8px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header eco-card-header text-white py-3">
+                    <h4 class="mb-0 fw-bold"><i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>Reportar punto de acumulación</h4>
+                    <small>Ayuda a mantener Villavicencio limpia. Tu reporte hace la diferencia.</small>
+                </div>
+                <div class="card-body p-4">
+
+                    {% if exito %}
+                    <div class="alert alert-success d-flex align-items-center gap-2 rounded-3" role="alert">
+                        <i class="bi bi-check-circle-fill fs-5"></i>
+                        <div>
+                            <strong>¡Reporte enviado exitosamente!</strong> Aparecerá en el mapa en breve.
+                            <div class="mt-2">
+                                <a href="/mapa" class="btn btn-success btn-sm me-2"><i class="bi bi-map me-1"></i>Ver en el mapa</a>
+                                <a href="/reportar" class="btn btn-outline-success btn-sm">Nuevo reporte</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if error %}
+                    <div class="alert alert-danger rounded-3"><i class="bi bi-x-circle me-2"></i>{{ error }}</div>
+                    {% endif %}
+
+                    {% if not exito %}
+                    <form action="/reportar" method="POST" enctype="multipart/form-data" id="formReporte">
+                        <!-- Título -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Título del reporte <span class="text-danger">*</span></label>
+                            <input type="text" name="titulo" class="form-control rounded-3" placeholder="Ej: Basura acumulada en esquina parque principal" required maxlength="200" />
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Descripción <span class="text-danger">*</span></label>
+                            <textarea name="descripcion" class="form-control rounded-3" rows="3" placeholder="Describe el problema con detalle: tipo de residuos, tiempo de acumulación, etc." required maxlength="1000"></textarea>
+                        </div>
+
+                        <!-- Barrio y Dirección -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Barrio</label>
+                                <input type="text" name="barrio" class="form-control rounded-3" placeholder="Ej: Centro, Barzal, Villaflores…" maxlength="150" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Dirección de referencia</label>
+                                <input type="text" name="direccion" class="form-control rounded-3" placeholder="Ej: Cra 30 con Cll 37" maxlength="300" />
+                            </div>
+                        </div>
+
+                        <!-- Mapa para seleccionar ubicación -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Ubicación en el mapa <span class="text-danger">*</span></label>
+                            <p class="text-muted small mb-2"><i class="bi bi-info-circle me-1"></i>Haz clic en el mapa para marcar la ubicación exacta o usa el botón GPS.</p>
+                            <div id="mapa-picker"></div>
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="button" id="btnGPS" class="btn btn-outline-primary btn-sm rounded-3">
+                                    <i class="bi bi-geo-alt-fill me-1"></i>Usar mi ubicación GPS
+                                </button>
+                                <small class="text-muted my-auto" id="coordsLabel">Sin ubicación seleccionada</small>
+                            </div>
+                            <input type="hidden" name="latitud" id="inputLat" required />
+                            <input type="hidden" name="longitud" id="inputLng" required />
+                        </div>
+
+                        <!-- Imagen -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Fotografía del punto</label>
+                            <input type="file" name="imagen" class="form-control rounded-3" accept=".jpg,.jpeg,.png,.webp" id="inputImg" onchange="previewImg(this)" />
+                            <div class="mt-2" id="imgPreviewBox" style="display:none">
+                                <img id="imgPreview" class="img-preview" src="" alt="Vista previa" />
+                            </div>
+                            <small class="text-muted">Formatos: JPG, PNG, WEBP. Máx. 5 MB.</small>
+                        </div>
+
+                        <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold rounded-3">
+                            <i class="bi bi-send-fill me-2"></i>Enviar reporte
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const mapaPicker = L.map("mapa-picker").setView([4.142, -73.626], 14);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap contributors", maxZoom: 19
+}).addTo(mapaPicker);
+
+let marcador = null;
+
+function ponerMarcador(lat, lng) {
+    if (marcador) mapaPicker.removeLayer(marcador);
+    marcador = L.marker([lat, lng]).addTo(mapaPicker);
+    document.getElementById("inputLat").value = lat;
+    document.getElementById("inputLng").value = lng;
+    document.getElementById("coordsLabel").textContent = `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+    document.getElementById("mapa-picker").classList.remove("border-danger");
+}
+
+mapaPicker.on("click", e => ponerMarcador(e.latlng.lat, e.latlng.lng));
+
+document.getElementById("btnGPS").addEventListener("click", () => {
+    if (!navigator.geolocation) { alert("Tu navegador no soporta geolocalización."); return; }
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            mapaPicker.setView([pos.coords.latitude, pos.coords.longitude], 17);
+            ponerMarcador(pos.coords.latitude, pos.coords.longitude);
+        },
+        () => alert("No se pudo obtener tu ubicación. Verifica permisos.")
+    );
+});
+
+document.getElementById("formReporte").addEventListener("submit", e => {
+    if (!document.getElementById("inputLat").value) {
+        e.preventDefault();
+        document.getElementById("mapa-picker").classList.add("border-danger");
+        document.getElementById("mapa-picker").scrollIntoView({ behavior: "smooth" });
+        alert("⚠️ Selecciona la ubicación en el mapa antes de enviar.");
+    }
+});
+
+function previewImg(input) {
+    const box = document.getElementById("imgPreviewBox");
+    const img = document.getElementById("imgPreview");
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => { img.src = e.target.result; box.style.display = "block"; };
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        box.style.display = "none";
+    }
+}
+</script>
+{% endblock %}

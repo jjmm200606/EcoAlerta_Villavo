@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Registrarse - EcoAlerta Villavo{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-lg rounded-4">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-person-plus-fill display-4 text-warning"></i>
+                        <h4 class="fw-bold mt-2">Crear cuenta</h4>
+                        <p class="text-muted small">Únete a la comunidad EcoAlerta Villavo</p>
+                    </div>
+
+                    {% if error %}
+                    <div class="alert alert-danger rounded-3 py-2"><i class="bi bi-x-circle me-2"></i>{{ error }}</div>
+                    {% endif %}
+
+                    {% if exito %}
+                    <div class="alert alert-success rounded-3">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        <strong>¡Cuenta creada exitosamente!</strong>
+                        <div class="mt-2">
+                            <a href="/login" class="btn btn-success btn-sm">Iniciar sesión</a>
+                        </div>
+                    </div>
+                    {% else %}
+                    <form action="/register" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Nombre completo</label>
+                            <input type="text" name="nombre" class="form-control rounded-3" placeholder="Tu nombre" required minlength="3" maxlength="100" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Email</label>
+                            <input type="email" name="email" class="form-control rounded-3" placeholder="tu@email.com" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Contraseña</label>
+                            <input type="password" name="password" class="form-control rounded-3" placeholder="Mínimo 6 caracteres" required minlength="6" />
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Confirmar contraseña</label>
+                            <input type="password" name="password_confirm" class="form-control rounded-3" placeholder="Repite tu contraseña" required />
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100 fw-bold rounded-3">
+                            <i class="bi bi-person-check-fill me-2"></i>Registrarme
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <p class="text-center small text-muted mt-3 mb-0">
+                        ¿Ya tienes cuenta? <a href="/login" class="text-warning fw-semibold">Ingresar</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

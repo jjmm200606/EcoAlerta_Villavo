@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Mapa de Reportes - EcoAlerta Villavo{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<style>
+  #mapa { height: calc(100vh - 76px); width: 100%; }
+  .legend { background: white; padding: 10px 14px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.2); line-height: 1.8; font-size: .85rem; }
+  .legend-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; }
+  .panel-filtros { position: absolute; top: 90px; right: 14px; z-index: 1000; background: white; border-radius: 12px; padding: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.15); min-width: 220px; }
+  .popup-img { width: 100%; max-height: 140px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; }
+  .badge-alta { background: #dc3545; }
+  .badge-media { background: #fd7e14; }
+  .badge-baja { background: #198754; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="position-relative">
+    <!-- Panel de filtros flotante -->
+    <div class="panel-filtros">
+        <h6 class="fw-bold mb-3"><i class="bi bi-funnel me-1"></i>Filtros</h6>
+        <div class="mb-2">
+            <label class="form-label small fw-semibold mb-1">Prioridad</label>
+            <div class="d-flex flex-column gap-1">
+                <div class="form-check form-check-sm"><input class="form-check-input" type="checkbox" id="fAlta" checked onchange="filtrarMapa()"><label class="form-check-label" for="fAlta"><span class="legend-dot" style="background:#dc3545"></span>Alta</label></div>
+                <div class="form-check form-check-sm"><input class="form-check-input" type="checkbox" id="fMedia" checked onchange="filtrarMapa()"><label class="form-check-label" for="fMedia"><span class="legend-dot" style="background:#fd7e14"></span>Media</label></div>
+                <div class="form-check form-check-sm"><input class="form-check-input" type="checkbox" id="fBaja" checked onchange="filtrarMapa()"><label class="form-check-label" for="fBaja"><span class="legend-dot" style="background:#198754"></span>Baja</label></div>
+            </div>
+        </div>
+        <hr class="my-2" />
+        <div class="form-check form-switch mb-1">
+            <input class="form-check-input" type="checkbox" id="toggleCalor" onchange="toggleMapaCalor()">
+            <label class="form-check-label small" for="toggleCalor">Mapa de calor</label>
+        </div>
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="toggleCluster" checked onchange="toggleCluster()">
+            <label class="form-check-label small" for="toggleCluster">Agrupar marcadores</label>
+        </div>
+        <hr class="my-2"/>
+        <a href="/reportar" class="btn btn-warning btn-sm w-100 fw-bold">
+            <i class="bi bi-plus-circle-fill me-1"></i>Nuevo reporte
+        </a>
+    </div>
+
+    <div id="mapa"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<script>
+// ─── Mapa centrado en Villavicencio ───
+const mapa = L.map("mapa").setView([4.142, -73.626], 13);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap contributors",
+    maxZoom: 19,
+}).addTo(mapa);
+
+// ─── Íconos por prioridad ───
+function iconoPrioridad(p) {
+    const colores = { alta: "#dc3545", media: "#fd7e14", baja: "#198754" };
+    const color = colores[p] || "#6c757d";
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="28" height="40">
+        <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24S24 21 24 12C24 5.4 18.6 0 12 0z" fill="${color}" stroke="white" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="5" fill="white"/>
+    </svg>`;
+    return L.divIcon({ html: svg, iconSize: [28, 40], iconAnchor: [14, 40], popupAnchor: [0, -42], className: "" });
+}
+
+let todosFeatures = [];
+let capaCluster = L.markerClusterGroup();
+let capaSinCluster = L.layerGroup();
+let capaCalor = null;
+let usarCluster = true;
+
+// ─── Cargar reportes ───
+async function cargarReportes() {
+    const res = await fetch("/api/reportes/geojson");
+    const geojson = await res.json();
+    todosFeatures = geojson.features || [];
+    renderMarcadores(todosFeatures);
+
+    // Datos para mapa de calor
+    const puntoCalor = todosFeatures.map(f => [
+        f.geometry.coordinates[1],
+        f.geometry.coordinates[0],
+        (f.properties.votos + 1) * 0.5
+    ]);
+    capaCalor = L.heatLayer(puntoCalor, { radius: 30, blur: 20, maxZoom: 17, max: 10 });
+}
+
+function renderMarcadores(features) {
+    capaCluster.clearLayers();
+    capaSinCluster.clearLayers();
+    if (mapa.hasLayer(capaCluster)) mapa.removeLayer(capaCluster);
+    if (mapa.hasLayer(capaSinCluster)) mapa.removeLayer(capaSinCluster);
+
+    features.forEach(f => {
+        const p = f.properties;
+        const coords = f.geometry.coordinates;
+        const marker = L.marker([coords[1], coords[0]], { icon: iconoPrioridad(p.prioridad) });
+
+        const img = p.imagen ? `<img src="${p.imagen}" class="popup-img"/>` : "";
+        const badgeClass = `badge-${p.prioridad}`;
+        marker.bindPopup(`
+            ${img}
+            <div class="fw-bold mb-1">${p.titulo}</div>
+            <p class="small mb-1">${p.descripcion}</p>
+            ${p.barrio ? `<div class="small text-muted mb-1"><i class="bi bi-geo-alt"></i> ${p.barrio}</div>` : ""}
+            <div class="d-flex align-items-center gap-2 mt-2">
+                <span class="badge ${badgeClass} text-white">${p.prioridad.toUpperCase()}</span>
+                <span class="badge bg-secondary">${p.estado}</span>
+                <small class="ms-auto text-muted"><i class="bi bi-hand-thumbs-up"></i> ${p.votos}</small>
+            </div>
+            <div class="mt-2">
+                <button onclick="confirmarReporte(${p.id})" class="btn btn-sm btn-outline-warning w-100">
+                    <i class="bi bi-hand-thumbs-up me-1"></i>Confirmar problema
+                </button>
+            </div>
+            <small class="text-muted d-block mt-1 text-end">${p.fecha}</small>
+        `, { maxWidth: 260 });
+
+        capaCluster.addLayer(marker);
+        capaSinCluster.addLayer(marker);
+    });
+
+    if (usarCluster) {
+        mapa.addLayer(capaCluster);
+    } else {
+        mapa.addLayer(capaSinCluster);
+    }
+}
+
+function filtrarMapa() {
+    const alta = document.getElementById("fAlta").checked;
+    const media = document.getElementById("fMedia").checked;
+    const baja = document.getElementById("fBaja").checked;
+    const filtrados = todosFeatures.filter(f => {
+        const p = f.properties.prioridad;
+        return (p === "alta" && alta) || (p === "media" && media) || (p === "baja" && baja);
+    });
+    renderMarcadores(filtrados);
+}
+
+function toggleMapaCalor() {
+    if (document.getElementById("toggleCalor").checked) {
+        if (capaCalor) capaCalor.addTo(mapa);
+    } else {
+        if (capaCalor) mapa.removeLayer(capaCalor);
+    }
+}
+
+function toggleCluster() {
+    usarCluster = document.getElementById("toggleCluster").checked;
+    filtrarMapa();
+}
+
+async function confirmarReporte(id) {
+    const res = await fetch(`/api/votar/${id}`, { method: "POST" });
+    const data = await res.json();
+    if (data.exito) {
+        alert(`✅ ¡Gracias! Este punto ahora tiene ${data.votos} confirmaciones.\nPrioridad: ${data.prioridad.toUpperCase()}`);
+        cargarReportes();
+    } else {
+        alert("ℹ️ " + data.mensaje);
+    }
+}
+
+// Leyenda
+const leyenda = L.control({ position: "bottomleft" });
+leyenda.onAdd = () => {
+    const div = L.DomUtil.create("div", "legend");
+    div.innerHTML = `<strong>Prioridad</strong><br>
+        <span class="legend-dot" style="background:#dc3545"></span>Alta<br>
+        <span class="legend-dot" style="background:#fd7e14"></span>Media<br>
+        <span class="legend-dot" style="background:#198754"></span>Baja`;
+    return div;
+};
+leyenda.addTo(mapa);
+
+cargarReportes();
+</script>
+{% endblock %}
