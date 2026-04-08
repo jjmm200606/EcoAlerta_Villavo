@@ -1,0 +1,154 @@
+/* ──────────────────────────────────────
+   EcoAlerta Villavo · Estilos Globales
+   ────────────────────────────────────── */
+
+:root {
+  --eco-dark:    #1a2332;
+  --eco-green:   #198754;
+  --eco-yellow:  #ffc107;
+  --eco-red:     #dc3545;
+  --eco-orange:  #fd7e14;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background: #f8f9fa;
+  color: #222;
+}
+
+/* ── Navbar ── */
+.eco-navbar {
+  background: var(--eco-dark);
+  box-shadow: 0 2px 12px rgba(0,0,0,.25);
+}
+
+.eco-navbar .navbar-brand {
+  font-size: 1.3rem;
+  letter-spacing: -.3px;
+}
+
+.text-success-light { color: #6ee08a !important; }
+
+.btn-report-nav {
+  background: var(--eco-yellow);
+  color: #222 !important;
+  border-radius: 20px;
+  padding: 6px 18px !important;
+  font-weight: 600;
+  transition: transform .15s, box-shadow .15s;
+}
+
+.btn-report-nav:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255,193,7,.4);
+}
+
+.btn-register-nav {
+  border: 2px solid rgba(255,255,255,.5);
+  border-radius: 20px;
+  padding: 5px 16px !important;
+  transition: all .2s;
+}
+
+.btn-register-nav:hover {
+  background: rgba(255,255,255,.1);
+  border-color: white;
+}
+
+/* ── Hero ── */
+.hero-section {
+  background: linear-gradient(135deg, #1a2332 0%, #0f3d2e 60%, #1a472a 100%);
+  min-height: 520px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='30' cy='30' r='1' fill='rgba(255,255,255,.06)'/%3E%3C/svg%3E") repeat;
+}
+
+.hero-icon { animation: pulse 3s ease-in-out infinite; }
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50%        { transform: scale(1.06); }
+}
+
+/* ── Stat cards ── */
+.stat-card {
+  background: white;
+  border: 1px solid #e9ecef;
+  transition: transform .2s, box-shadow .2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.1) !important;
+}
+
+.stat-num { font-size: 2.2rem; }
+
+/* ── How-it-works cards ── */
+.how-card {
+  background: white;
+  border: 1px solid #e9ecef;
+  position: relative;
+  transition: transform .2s;
+}
+
+.how-card:hover { transform: translateY(-4px); }
+
+.how-step-num {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--eco-dark);
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: .85rem;
+}
+
+/* ── CTA section ── */
+.cta-section {
+  background: linear-gradient(135deg, #0f3d2e, #1a472a);
+}
+
+/* ── Card header (formulario reportar) ── */
+.eco-card-header {
+  background: linear-gradient(135deg, var(--eco-dark), #0f3d2e);
+}
+
+/* ── Reporte cards ── */
+.reporte-card {
+  transition: transform .2s, box-shadow .2s;
+}
+
+.reporte-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.12) !important;
+}
+
+/* ── Footer ── */
+.eco-footer {
+  background: var(--eco-dark);
+  color: rgba(255,255,255,.7);
+  margin-top: auto;
+}
+
+/* ── Responsive tweaks ── */
+@media (max-width: 576px) {
+  .hero-section { min-height: 400px; }
+  .stat-num { font-size: 1.6rem; }
+}
