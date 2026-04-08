@@ -17,8 +17,8 @@ from sqlalchemy import func
 from .database import SessionLocal, engine, get_db
 from .models import Base, Usuario, Reporte, Voto, HistorialEstado
 
-# Las tablas se crean manualmente con crear_bd.sql
-# Base.metadata.create_all(bind=engine)
+# Crear tablas automáticamente
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="EcoAlerta Villavo")
 
