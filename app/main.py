@@ -111,6 +111,12 @@ def crear_datos_demo(db: Session):
 
 # Crear admin y datos demo al iniciar
 with SessionLocal() as _db:
+    # Cambiar columna imagen de VARCHAR(300) a TEXT para soportar base64
+    try:
+        _db.execute(__import__('sqlalchemy').text("ALTER TABLE reportes ALTER COLUMN imagen TYPE TEXT"))
+        _db.commit()
+    except Exception:
+        _db.rollback()
     crear_admin_default(_db)
     crear_datos_demo(_db)
 
@@ -378,40 +384,43 @@ async def actualizar_reporte(
     imagen: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
-    if not requiere_admin(request):
-        return JSONResponse({"error": "No autorizado"}, status_code=403)
+    try:
+        if not requiere_admin(request):
+            return JSONResponse({"error": "No autorizado"}, status_code=403)
 
-    estados_validos = {"pendiente", "en_proceso", "resuelto"}
-    if estado not in estados_validos:
-        return JSONResponse({"exito": False, "mensaje": "Estado no válido"}, status_code=400)
+        estados_validos = {"pendiente", "en_proceso", "resuelto"}
+        if estado not in estados_validos:
+            return JSONResponse({"exito": False, "mensaje": "Estado no válido"}, status_code=400)
 
-    reporte = db.query(Reporte).filter(Reporte.id == reporte_id).first()
-    if not reporte:
-        return JSONResponse({"exito": False, "mensaje": "Reporte no encontrado"}, status_code=404)
+        reporte = db.query(Reporte).filter(Reporte.id == reporte_id).first()
+        if not reporte:
+            return JSONResponse({"exito": False, "mensaje": "Reporte no encontrado"}, status_code=404)
 
-    admin = obtener_usuario(request)
-    historial = HistorialEstado(
-        reporte_id=reporte_id,
-        estado_anterior=reporte.estado,
-        estado_nuevo=estado,
-        comentario=comentario,
-        admin_email=admin["email"] if admin else "",
-    )
-    db.add(historial)
-    estado_anterior = reporte.estado
-    reporte.estado = estado
-    if prioridad and prioridad in {"baja", "media", "alta"}:
-        reporte.prioridad = prioridad
-    if imagen and imagen.filename:
-        ext = Path(imagen.filename).suffix.lower()
-        if ext in {".jpg", ".jpeg", ".png", ".webp"}:
-            contenido = await imagen.read()
-            mime = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}
-            tipo = mime.get(ext.lstrip("."), "image/jpeg")
-            reporte.imagen = f"data:{tipo};base64,{base64.b64encode(contenido).decode()}"
-    reporte.updated_at = datetime.now()
-    db.commit()
-    return JSONResponse({"exito": True, "mensaje": "Reporte actualizado"})
+        admin = obtener_usuario(request)
+        historial = HistorialEstado(
+            reporte_id=reporte_id,
+            estado_anterior=reporte.estado,
+            estado_nuevo=estado,
+            comentario=comentario,
+            admin_email=admin["email"] if admin else "",
+        )
+        db.add(historial)
+        reporte.estado = estado
+        if prioridad and prioridad in {"baja", "media", "alta"}:
+            reporte.prioridad = prioridad
+        if imagen and imagen.filename:
+            ext = Path(imagen.filename).suffix.lower()
+            if ext in {".jpg", ".jpeg", ".png", ".webp"}:
+                contenido = await imagen.read()
+                mime = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}
+                tipo = mime.get(ext.lstrip("."), "image/jpeg")
+                reporte.imagen = f"data:{tipo};base64,{base64.b64encode(contenido).decode()}"
+        reporte.updated_at = datetime.now()
+        db.commit()
+        return JSONResponse({"exito": True, "mensaje": "Reporte actualizado"})
+    except Exception as e:
+        db.rollback()
+        return JSONResponse({"exito": False, "mensaje": str(e)}, status_code=500)
 
 
 @app.post("/admin/reportes/eliminar/{reporte_id}")
