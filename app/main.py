@@ -2,7 +2,7 @@
 # python -m uvicorn app.main:app --reload
 
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import shutil
 import uuid
 
@@ -73,11 +73,41 @@ def crear_admin_default(db: Session):
         )
         db.add(admin)
         db.commit()
+    if not db.query(Usuario).filter(Usuario.email == "maria@gmail.com").first():
+        db.add(Usuario(nombre="María López", email="maria@gmail.com", password="123456", rol="ciudadano"))
+        db.commit()
 
 
-# Crear admin al iniciar
+def crear_datos_demo(db: Session):
+    """Crear reportes de ejemplo si la BD está vacía."""
+    if db.query(Reporte).count() > 0:
+        return
+    ciudadano = db.query(Usuario).filter(Usuario.email == "maria@gmail.com").first()
+    uid = ciudadano.id if ciudadano else None
+    demos = [
+        ("Basura acumulada en esquina del Barzal", "Llevan 5 días sin recoger.", 4.1420, -73.6267, "El Barzal", "Cra 35 con Calle 37", "alta", 12, 8),
+        ("Escombros en vía principal de La Grama", "Escombros bloqueando el andén.", 4.1365, -73.6312, "La Grama", "Calle 40 con Cra 33", "media", 5, 4),
+        ("Contenedor rebosado en el Centro", "No se ha vaciado el contenedor.", 4.1510, -73.6350, "Centro", "Plaza Los Libertadores", "alta", 18, 6),
+        ("Bolsas de basura en caño de El Triunfo", "Residentes arrojan basura al caño.", 4.1280, -73.6190, "El Triunfo", "Calle 20 sur", "baja", 2, 3),
+        ("Residuos peligrosos cerca del colegio", "Residuos hospitalarios encontrados.", 4.1480, -73.6220, "La Esperanza", "Cra 22 con Calle 44", "alta", 25, 2),
+        ("Punto de acopio lleno en Porfía", "No cabe más basura.", 4.1100, -73.6400, "Porfía", "Av. Principal Porfía", "media", 7, 5),
+        ("Basura en parque de la Rochela", "Desperdicios de comida y plásticos.", 4.1600, -73.6150, "Rochela", "Parque de la Rochela", "baja", 3, 1),
+        ("Llantas abandonadas en lote baldío", "Más de 30 llantas usadas.", 4.1350, -73.6100, "San Antonio", "Calle 15 con Cra 12", "media", 9, 7),
+    ]
+    for t, desc, lat, lng, barrio, direc, prio, votos, dias in demos:
+        db.add(Reporte(
+            titulo=t, descripcion=desc, latitud=lat, longitud=lng,
+            direccion=direc, barrio=barrio, prioridad=prio, estado="pendiente",
+            votos_count=votos, usuario_id=uid,
+            created_at=datetime.now() - timedelta(days=dias),
+        ))
+    db.commit()
+
+
+# Crear admin y datos demo al iniciar
 with SessionLocal() as _db:
     crear_admin_default(_db)
+    crear_datos_demo(_db)
 
 
 # ───────────── Rutas públicas ─────────────
