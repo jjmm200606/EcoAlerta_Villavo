@@ -132,6 +132,10 @@
                         <label class="form-label">Comentario (opcional)</label>
                         <textarea name="comentario" class="form-control" rows="2" placeholder="Motivo del cambio..."></textarea>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Cambiar imagen (opcional)</label>
+                        <input type="file" name="imagen" class="form-control" accept=".jpg,.jpeg,.png,.webp" />
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -152,7 +156,7 @@ document.addEventListener("submit", async function(event) {
     event.preventDefault();
     const form = event.target;
     const id = form.dataset.id;
-    const body = new URLSearchParams(new FormData(form));
+    const body = new FormData(form);
     const res = await fetch(`/admin/reportes/actualizar/${id}`, { method: "POST", body });
     const data = await res.json();
     if (data.exito) {
