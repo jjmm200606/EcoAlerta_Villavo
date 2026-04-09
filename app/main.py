@@ -369,12 +369,13 @@ def admin_reportes(request: Request, db: Session = Depends(get_db)):
 
 
 @app.post("/admin/reportes/actualizar/{reporte_id}")
-def actualizar_reporte(
+async def actualizar_reporte(
     request: Request,
     reporte_id: int,
     estado: str = Form(...),
     prioridad: str = Form(None),
     comentario: str = Form(""),
+    imagen: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
     if not requiere_admin(request):
@@ -401,6 +402,13 @@ def actualizar_reporte(
     reporte.estado = estado
     if prioridad and prioridad in {"baja", "media", "alta"}:
         reporte.prioridad = prioridad
+    if imagen and imagen.filename:
+        ext = Path(imagen.filename).suffix.lower()
+        if ext in {".jpg", ".jpeg", ".png", ".webp"}:
+            contenido = await imagen.read()
+            mime = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}
+            tipo = mime.get(ext.lstrip("."), "image/jpeg")
+            reporte.imagen = f"data:{tipo};base64,{base64.b64encode(contenido).decode()}"
     reporte.updated_at = datetime.now()
     db.commit()
     return JSONResponse({"exito": True, "mensaje": "Reporte actualizado"})
