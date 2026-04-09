@@ -151,19 +151,23 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener("submit", async function(event) {
-    if (!event.target.classList.contains("form-actualizar")) return;
-    event.preventDefault();
-    const form = event.target;
-    const id = form.dataset.id;
-    const body = new FormData(form);
-    const res = await fetch(`/admin/reportes/actualizar/${id}`, { method: "POST", body });
-    const data = await res.json();
-    if (data.exito) {
-        location.reload();
-    } else {
-        alert("Error: " + data.mensaje);
-    }
+document.querySelectorAll(".form-actualizar").forEach(function(form) {
+    form.addEventListener("submit", async function(event) {
+        event.preventDefault();
+        const id = form.dataset.id;
+        const body = new FormData(form);
+        try {
+            const res = await fetch(`/admin/reportes/actualizar/${id}`, { method: "POST", body });
+            const data = await res.json();
+            if (data.exito) {
+                location.reload();
+            } else {
+                alert("Error: " + (data.mensaje || "Error desconocido"));
+            }
+        } catch(err) {
+            alert("Error de conexión: " + err.message);
+        }
+    });
 });
 
 document.addEventListener("click", async function(event) {
