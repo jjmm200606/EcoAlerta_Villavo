@@ -47,7 +47,7 @@ class Reporte(Base):
     longitud = Column(Float, nullable=False)
     direccion = Column(String(300))
     barrio = Column(String(150))
-    imagen = Column(String(300))
+    imagen = Column(Text)
     prioridad = Column(String(20), default="baja")
     estado = Column(String(30), default="pendiente")
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
